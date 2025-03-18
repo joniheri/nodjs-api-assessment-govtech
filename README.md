@@ -8,7 +8,7 @@
 ## Sebelum Jalankan Program
 
 - Kamu harus sudah install Node JS 22.x.x dan MySQL 8.x.x (atau anda bisa menggunakan XAMPP 8.1 untuk Database MySQL) di komputer anda
-- Pastikan anda sudah mendapatkan source code ini dati github: https://github.com/joniheri/nodjs-api-assessment-govtech
+- Pastikan anda sudah mendapatkan source code ini dari github: https://github.com/joniheri/nodjs-api-assessment-govtech
 - Setelah itu, buka source code anda tadi di Text Exitor seperti Visual Studio Code (VSCode)
 - Kemudian di VSCode tersebut, silahkan buka terminalnya, kemudian ketikkan sintak berikut:
   - `npm install` --> Install semua library yang dibutuhakn
@@ -18,23 +18,23 @@
 
 ## Jalankan Program
 
-- Setelah itu, jika semua sudah langkah2 diatas berhasil, runing program dengan ketik di termnal VSCode tadi:
+- Setelah itu, jika semua langkah2 diatas sudah berhasil, runing program dengan ketik di termnal VSCode tadi:
   - `npm run dev`
-- Jika runing program berhasil, akan bisa di tes ti Base URL: `localhost:3000` di browser anda atau bisa menggunakan aplikasi Postman
+- Jika runing program berhasil, anda bisa di tes URL: `localhost:3000` di browser anda atau bisa menggunakan aplikasi Postman
 
 ## Endpoint API
 
 - AuthRoutes:
-  - register: method POST `http://localhost:3000/api/auth/register`
-  - login: method POST `http://localhost:3000/api/auth/login`
-  - refres-token: method POST `http://localhost:3000/api/auth/login`
+  - `http://localhost:3000/api/auth/register` --> register: method POST
+  - `http://localhost:3000/api/auth/login` --> login: method POST
+  - `http://localhost:3000/api/auth/login` --> refres-token: method POST
 - TeacherRoutes:
   - Catatan:
     - Untuk mengakses endpoint TeacherRoutes ini, harus menyertakan Authorization `Barier Token`, dimana token `Barier Token` didapat dari setelah hit endpoint `login` dan harus user yang level-nya `1`
-  - add-teacher: method POST `http://localhost:3000/api/teachers`
-  - get-teachers: method GET `http://localhost:3000/api/teachers`
-  - update-teachers: method PATCH `http://localhost:3000/api/teachers/id-teacher`
-  - delete-teachers: method DELETE `http://localhost:3000/api/teachers/id-teacher`
+  - `http://localhost:3000/api/teachers` --> add-teacher: method POST
+  - `http://localhost:3000/api/teachers` --> get-teachers: method GET
+  - `http://localhost:3000/api/teachers/id-teacher` --> update-teachers: method PATCH
+  - `http://localhost:3000/api/teachers/id-teacher` --> delete-teachers: method DELETE
 
 ## Struktur Directory Folder/File
 
