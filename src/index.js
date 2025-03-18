@@ -1,10 +1,10 @@
 const express = require("express");
 require("dotenv").config();
 
-const protectedRoutes = require("./routes/ProtectedRoutes");
-const authRoutes = require("./routes/AuthRoutes");
-const userRoutes = require("./routes/UserRoutes");
-const teacherRoutes = require("./routes/TeacherRoutes");
+const protectedRoutes = require("./routes/protected-routes");
+const authRoutes = require("./routes/auth-routes");
+const userRoutes = require("./routes/user-routes");
+const teacherRoutes = require("./routes/teacher-routes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;

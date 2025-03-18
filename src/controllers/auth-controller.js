@@ -154,7 +154,7 @@ exports.login = async (req, res) => {
       process.env.REFRESH_SECRET_KEY,
       { expiresIn: "7d" } // Refresh Token berlaku 7 hari
     );
-    // End MakeToken
+    // End MakeRefreshToken
 
     // Simpan refreshToken di database
     await UserModel.update(

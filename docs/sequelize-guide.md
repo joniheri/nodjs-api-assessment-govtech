@@ -14,14 +14,16 @@
 ## Seeder
 
 - Make seeder
-  `npx sequelize-cli seed:generate --name NamaSeeder`
+  `npx sequelize-cli seed:generate --name user-seeder`
 - Running seeder
   `npx sequelize-cli db:seed:all`
 - Running seeder specific
   `npx sequelize-cli db:seed --seed name-of-seed-as-in-data`
 - Undo seeder
   `npx sequelize-cli db:seed:undo`
-- Undo seeder specific
+- Undo all seeder:
+  - `npx sequelize-cli db:seed:undo:all`
+- Undo seeder specific seed
   `npx sequelize-cli db:seed:undo --seed name-of-seed-as-in-data`
 
 ## Description of Relation DB using Sequelize

@@ -6,7 +6,7 @@ const {
   register,
   login,
   refreshToken,
-} = require("../controllers/AuthController");
+} = require("../controllers/auth-controller");
 
 router.post("/register", register);
 router.post("/login", login);

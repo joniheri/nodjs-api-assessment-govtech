@@ -9,6 +9,7 @@ const dataInput = {
   username: "admin",
   password: "admin",
   fullName: "Administrator",
+  status: "active",
   level: 1,
 };
 
@@ -60,6 +61,7 @@ module.exports = {
       username: dataInput.username,
       password: await bcrypt.hash(dataInput.password, 10),
       fullName: dataInput.fullName,
+      status: dataInput.status,
       level: dataInput.level,
     });
     if (!insertData) {
