@@ -155,6 +155,7 @@ Jika berhasil, API dapat diakses melalui `http://localhost:3000`
     "students": [
       "student1@email.com",
       "student2@email.com",
+      "student3@email.com",
       "student4@email.com"
     ]
   }
@@ -170,12 +171,7 @@ Jika berhasil, API dapat diakses melalui `http://localhost:3000`
 
 ```json
 {
-  "students": [
-    "student1@email.com",
-    "student2@email.com",
-    "student3@email.com",
-    "student4@email.com"
-  ]
+  "students": ["student1@email.com", "student2@email.com", "student4@email.com"]
 }
 ```
 
@@ -430,6 +426,7 @@ package.json
     "students": [
       "student1@email.com",
       "student2@email.com",
+      "student3@email.com",
       "student4@email.com"
     ]
   }
@@ -446,7 +443,6 @@ package.json
     "students": [
       "student1@email.com",
       "student2@email.com",
-      "student3@email.com",
       "student4@email.com"
     ]
   }
