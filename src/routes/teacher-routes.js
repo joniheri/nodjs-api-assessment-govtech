@@ -9,15 +9,28 @@ const {
 
 // Import Controller
 const {
-  createTeacher,
   getTeachers,
-  updateTeacher,
-  deleteTeacher,
+  registerStudents,
+  getCommonStudents,
+  suspendStudent,
+  unSuspendStudent,
+  retrieveForNotifications,
 } = require("../controllers/teacher-controller");
 
-router.post("/", verifyToken, middlewareLevel([1]), createTeacher); // protected
-router.get("/", verifyToken, middlewareLevel([1]), getTeachers); // protected
-router.patch("/:id", verifyToken, middlewareLevel([1]), updateTeacher); // protected
-router.delete("/:id", verifyToken, middlewareLevel([1]), deleteTeacher); // protected
+// Public Endpoint
+router.get("/", getTeachers);
+router.post("/register", registerStudents);
+router.get("/commonstudents", getCommonStudents);
+router.post("/suspend", suspendStudent);
+router.post("/unsuspend", unSuspendStudent);
+router.post("/retrievefornotifications", retrieveForNotifications);
+
+// Protected Endpoint
+router.post(
+  "/register-protected",
+  verifyToken,
+  middlewareLevel([1]),
+  registerStudents
+);
 
 module.exports = router;

@@ -3,12 +3,12 @@ const router = express.Router();
 
 // Import Controller
 const {
-  register,
+  // register,
   login,
   refreshToken,
 } = require("../controllers/auth-controller");
 
-router.post("/register", register);
+// router.post("/register", register);
 router.post("/login", login);
 router.post("/refresh-token", refreshToken);
 

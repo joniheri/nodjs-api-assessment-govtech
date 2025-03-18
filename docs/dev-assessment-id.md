@@ -70,7 +70,7 @@ Penilaian tidak hanya berdasarkan fungsionalitas, tetapi juga:
 
 ## 5. Daftar Fitur/API (_User Stories_)
 
-### **1. Mendaftarkan Siswa ke Guru**
+### **1. Mendaftarkan Siswa ke Guru** ✅
 
 - **Endpoint:** `POST /api/register`
 - **Headers:** `Content-Type: application/json`
@@ -84,7 +84,7 @@ Penilaian tidak hanya berdasarkan fungsionalitas, tetapi juga:
 }
 ```
 
-### **2. Mendapatkan Siswa yang Terdaftar di Beberapa Guru**
+### **2. Mendapatkan Siswa yang Terdaftar di Beberapa Guru** ✅
 
 - **Endpoint:** `GET /api/commonstudents`
 - **Response:** HTTP 200
@@ -99,7 +99,7 @@ Penilaian tidak hanya berdasarkan fungsionalitas, tetapi juga:
 }
 ```
 
-### **3. Menskors Siswa (Suspend Student)**
+### **3. Menskors Siswa (Suspend Student)** ✅
 
 - **Endpoint:** `POST /api/suspend`
 - **Headers:** `Content-Type: application/json`
@@ -112,7 +112,7 @@ Penilaian tidak hanya berdasarkan fungsionalitas, tetapi juga:
 }
 ```
 
-### **4. Mengirim Notifikasi ke Siswa yang Terdaftar & yang Disebut dalam Notifikasi**
+### **4. Mengirim Notifikasi ke Siswa yang Terdaftar & yang Disebut dalam Notifikasi** ✅
 
 - **Endpoint:** `POST /api/retrievefornotifications`
 - **Headers:** `Content-Type: application/json`
@@ -140,7 +140,7 @@ Penilaian tidak hanya berdasarkan fungsionalitas, tetapi juga:
 
 ---
 
-## 6. Respons Error
+## 6. Respons Error ✅
 
 Jika terjadi kesalahan, API harus memberikan:
 

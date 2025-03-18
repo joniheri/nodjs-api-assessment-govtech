@@ -1,53 +1,10 @@
-const { Teacher: TeacherModel } = require("../../models");
+const {
+  Teacher: TeacherModel,
+  Student: StudentModel,
+  TeacherStudent: TeacherStudentModel,
+  sequelize,
+} = require("../../models");
 const joi = require("joi");
-
-exports.createTeacher = async (req, res) => {
-  try {
-    const dataInput = req.body;
-
-    // Validasi input dengan Joi
-    const validationSchema = joi.object({
-      fullName: joi.string().min(3).trim().required(),
-      email: joi.string().email().trim().required(),
-      gender: joi.string().valid("male", "female", "other").optional(),
-    });
-
-    const { error } = validationSchema.validate(dataInput);
-    if (error) {
-      return res.status(400).send({
-        status: "fail",
-        message: error.details[0].message,
-      });
-    }
-
-    // Cek apakah email sudah terdaftar
-    const existingTeacher = await TeacherModel.findOne({
-      where: { email: dataInput.email },
-    });
-    if (existingTeacher) {
-      return res.status(400).send({
-        status: "fail",
-        message: "Email already exists",
-      });
-    }
-
-    // Simpan data ke database
-    const newTeacher = await TeacherModel.create(dataInput);
-
-    return res.status(201).send({
-      status: "success",
-      message: "Teacher created successfully",
-      teacher: newTeacher,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send({
-      status: "fail",
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
 
 exports.getTeachers = async (req, res) => {
   try {
@@ -67,10 +24,9 @@ exports.getTeachers = async (req, res) => {
       });
     }
 
-    // Kirim response dengan data guru
     return res.status(200).send({
       status: "success",
-      message: "Teachers retrieved successfully",
+      message: "Get Teachers successfully",
       data: teachers,
     });
   } catch (error) {
@@ -83,93 +39,353 @@ exports.getTeachers = async (req, res) => {
   }
 };
 
-exports.updateTeacher = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const dataInput = req.body;
+exports.registerStudents = async (req, res) => {
+  // Membuat transaksi database untuk memastikan semua perubahan dilakukan dengan aman.
+  // Jika ada error, semua perubahan bisa dibatalkan (rollback).
+  const transaction = await sequelize.transaction();
 
-    // Validasi input dengan Joi
-    const validationSchema = joi.object({
-      fullName: joi.string().min(3).trim().required(),
-      email: joi.string().email().trim().required(),
-      gender: joi.string().valid("male", "female", "other").optional(),
+  try {
+    // Validasi Input Menggunakan Joi
+    const schema = joi.object({
+      teacher: joi.string().email().required(),
+      students: joi.array().items(joi.string().email()).required(),
     });
 
-    const { error } = validationSchema.validate(dataInput);
+    const { error, value } = schema.validate(req.body);
     if (error) {
-      return res.status(400).send({
+      return res.status(400).json({
         status: "fail",
         message: error.details[0].message,
       });
     }
 
-    // Cek apakah teacher dengan ID tersebut ada
-    const teacher = await TeacherModel.findByPk(id);
-    if (!teacher) {
-      return res.status(404).send({
-        status: "fail",
-        message: `Teacher with ID ${id} not found`,
-      });
-    }
+    const { teacher, students } = value;
 
-    // Cek apakah email berubah
-    if (dataInput.email && dataInput.email !== teacher.email) {
-      // Periksa apakah email baru sudah digunakan oleh teacher lain
-      const emailExists = await TeacherModel.findOne({
-        where: { email: dataInput.email },
-      });
-
-      if (emailExists) {
-        return res.status(400).send({
-          status: "fail",
-          message: "Email is already in use by another teacher",
-        });
-      }
-    }
-
-    // Update data teacher
-    await teacher.update(dataInput);
-
-    return res.status(200).send({
-      status: "success",
-      message: "Teacher updated successfully",
-      teacher,
+    // **Gunakan findOrCreate agar lebih aman dari race condition**
+    const [teacherRecord] = await TeacherModel.findOrCreate({
+      where: { email: teacher },
+      defaults: { email: teacher },
+      transaction,
     });
+
+    // **Ambil semua student yang sudah ada dalam satu query**
+    const existingStudents = await StudentModel.findAll({
+      where: { email: students },
+      transaction,
+    });
+
+    // Buat daftar email student yang sudah ada
+    const existingStudentEmails = existingStudents.map((s) => s.email);
+
+    // Cari student yang belum ada di database
+    const newStudentEmails = students.filter(
+      (email) => !existingStudentEmails.includes(email)
+    );
+
+    // Jika ada student baru, buat sekaligus dengan bulkCreate
+    if (newStudentEmails.length > 0) {
+      const newStudents = await StudentModel.bulkCreate(
+        newStudentEmails.map((email) => ({ email })),
+        { transaction, ignoreDuplicates: true, returning: true }
+      );
+
+      // Gabungkan student yang baru dibuat dengan yang sudah ada
+      existingStudents.push(...newStudents);
+    }
+
+    // **Cek apakah relasi Teacher-Student sudah ada sebelum menambahkan**
+    const existingRelations = await TeacherStudentModel.findAll({
+      where: {
+        teacherId: teacherRecord.id,
+        studentId: existingStudents.map((s) => s.id),
+      },
+      transaction,
+    });
+
+    const existingRelationIds = existingRelations.map((rel) => rel.studentId);
+
+    // Filter hanya student yang belum terdaftar dengan teacher ini
+    const relationsToInsert = existingStudents
+      .filter((student) => !existingRelationIds.includes(student.id))
+      .map((student) => ({
+        teacherId: teacherRecord.id,
+        studentId: student.id,
+      }));
+
+    // Gunakan `bulkCreate` agar lebih optimal
+    if (relationsToInsert.length > 0) {
+      await TeacherStudentModel.bulkCreate(relationsToInsert, {
+        transaction,
+        ignoreDuplicates: true, // Mencegah error jika ada duplikasi
+      });
+    }
+
+    await transaction.commit(); // Commit jika semua proses berhasil
+
+    // return res.status(201).json({
+    //   status: "success",
+    //   message: "Teacher registered students successfully",
+    // });
+
+    return res.status(204).json();
   } catch (error) {
-    console.error("Error updating teacher:", error.message);
-    return res.status(500).send({
+    await transaction.rollback(); // Rollback jika ada error
+    console.error(error.message);
+    return res.status(500).json({
       status: "fail",
-      message: "Internal server error",
+      message: "Internal Server Error",
       error: error.message,
     });
   }
 };
 
-exports.deleteTeacher = async (req, res) => {
+exports.getCommonStudents = async (req, res) => {
   try {
-    const { id } = req.params;
+    let teachers = req.query.teacher; // Ambil query parameter teacher
 
-    // Cek apakah teacher dengan ID tersebut ada
-    const teacher = await TeacherModel.findByPk(id);
-    if (!teacher) {
-      return res.status(404).send({
+    // Pastikan teacher adalah array (jika hanya satu, ubah jadi array)
+    if (!teachers) {
+      return res.status(400).json({
         status: "fail",
-        message: `Teacher with ID ${id} not found`,
+        message: "Teacher query parameter is required",
+      });
+    }
+    if (!Array.isArray(teachers)) {
+      teachers = [teachers]; // Ubah jadi array jika hanya satu
+    }
+
+    // Cari semua teacher berdasarkan email
+    const teacherRecords = await TeacherModel.findAll({
+      where: { email: teachers },
+      attributes: ["id"], // Kita hanya butuh ID
+    });
+
+    // Jika tidak ada guru yang ditemukan, kembalikan response kosong
+    if (teacherRecords.length === 0) {
+      return res.status(200).json({ students: [] });
+    }
+
+    // Ambil semua ID guru
+    const teacherIds = teacherRecords.map((teacher) => teacher.id);
+
+    // Ambil semua relasi student yang diajar oleh teacher yang diminta
+    const teacherStudentRecords = await TeacherStudentModel.findAll({
+      where: { teacherId: teacherIds },
+      attributes: ["studentId"], // Kita hanya butuh ID murid
+    });
+
+    // Jika tidak ada student yang ditemukan, return kosong
+    if (teacherStudentRecords.length === 0) {
+      return res.status(200).json({ students: [] });
+    }
+
+    // Hitung jumlah guru per studentId (untuk filtering jika banyak guru)
+    const studentCountMap = {};
+    teacherStudentRecords.forEach((record) => {
+      studentCountMap[record.studentId] =
+        (studentCountMap[record.studentId] || 0) + 1;
+    });
+
+    // Ambil hanya studentId yang muncul sebanyak jumlah teacher (artinya diajar oleh semua guru)
+    const commonStudentIds = Object.keys(studentCountMap).filter(
+      (studentId) => studentCountMap[studentId] === teacherIds.length
+    );
+
+    // Ambil email dari student yang ditemukan
+    const commonStudents = await StudentModel.findAll({
+      where: { id: commonStudentIds },
+      attributes: ["email"], // Kita hanya butuh email
+    });
+
+    // Kirim response
+    return res.status(200).json({
+      students: commonStudents.map((student) => student.email),
+    });
+  } catch (error) {
+    console.error(error.message);
+    return res.status(500).json({
+      status: "fail",
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+exports.suspendStudent = async (req, res) => {
+  try {
+    // Validasi request body
+    const schema = joi.object({
+      student: joi.string().email().required(),
+    });
+
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        status: "fail",
+        message: error.details[0].message,
       });
     }
 
-    // Hapus teacher dari database
-    await teacher.destroy();
+    const { student } = value;
 
-    return res.status(200).send({
-      status: "success",
-      message: "Teacher deleted successfully",
+    // Cari student berdasarkan email
+    const studentRecord = await StudentModel.findOne({
+      where: { email: student },
     });
+
+    if (!studentRecord) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Student not found",
+      });
+    }
+
+    // Update status suspended
+    await studentRecord.update({ suspended: true });
+
+    return res.status(204).send(); // Berhasil, tanpa response body
   } catch (error) {
-    console.error("Error deleting teacher:", error.message);
-    return res.status(500).send({
+    console.error(error);
+    return res.status(500).json({
       status: "fail",
-      message: "Internal server error",
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+exports.unSuspendStudent = async (req, res) => {
+  try {
+    // Validasi request body
+    const schema = joi.object({
+      student: joi.string().email().required(),
+    });
+
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        status: "fail",
+        message: error.details[0].message,
+      });
+    }
+
+    const { student } = value;
+
+    // Cari student berdasarkan email
+    const studentRecord = await StudentModel.findOne({
+      where: { email: student },
+    });
+
+    if (!studentRecord) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Student not found",
+      });
+    }
+
+    // Jika student tidak dalam kondisi suspended, return 400
+    if (!studentRecord.suspended) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Student is not suspended",
+      });
+    }
+
+    // Update status suspended ke false
+    await studentRecord.update({ suspended: false });
+
+    return res.status(204).send(); // Berhasil, tanpa response body
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status: "fail",
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+exports.retrieveForNotifications = async (req, res) => {
+  try {
+    // Validasi request body menggunakan Joi
+    const schema = joi.object({
+      teacher: joi.string().email().required(),
+      notification: joi.string().required(),
+    });
+
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        status: "fail",
+        message: error.details[0].message,
+      });
+    }
+
+    const { teacher, notification } = value;
+
+    // Cek apakah guru ada di database
+    const teacherRecord = await TeacherModel.findOne({
+      where: { email: teacher },
+    });
+
+    if (!teacherRecord) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Teacher not found",
+      });
+    }
+
+    // Ambil daftar siswa yang terdaftar pada guru ini dan tidak disuspend
+    const registeredStudents = await StudentModel.findAll({
+      include: {
+        model: TeacherModel,
+        as: "teachers",
+        where: { id: teacherRecord.id },
+      },
+      where: { suspended: false },
+    });
+
+    // Ambil daftar email siswa yang terdaftar pada guru
+    const registeredEmails = registeredStudents.map((s) => s.email);
+
+    // Cari email yang disebutkan dalam notifikasi dengan regex
+    const mentionedEmails = (
+      notification.match(/@([\w.-]+@[a-zA-Z.-]+)/g) || []
+    ).map((email) => email.substring(1)); // Hilangkan karakter '@'
+
+    // Ambil daftar siswa dari mention yang ada dalam database dan tidak suspended
+    const mentionedStudents = await StudentModel.findAll({
+      where: {
+        email: mentionedEmails,
+        suspended: false,
+      },
+    });
+
+    const mentionedEmailsFiltered = mentionedStudents.map((s) => s.email);
+
+    // Cek apakah ada email yang disebut tetapi tidak ditemukan di database
+    const notFoundEmails = mentionedEmails.filter(
+      (email) => !mentionedEmailsFiltered.includes(email)
+    );
+
+    if (notFoundEmails.length > 0) {
+      return res.status(404).json({
+        status: "fail",
+        message: `Student with email ${notFoundEmails.join(", ")} not found`,
+      });
+    }
+
+    // Gabungkan daftar email registered students dan mentioned students
+    const recipients = [
+      ...new Set([...registeredEmails, ...mentionedEmailsFiltered]),
+    ];
+
+    return res.status(200).json({ recipients });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status: "fail",
+      message: "Internal Server Error",
       error: error.message,
     });
   }

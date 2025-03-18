@@ -16,7 +16,9 @@ const {
   deleteStudent,
 } = require("../controllers/student-controller");
 
-// Endpoint
+// Public Endpoint
+
+// Protected Endpoint
 router.post("/", verifyToken, middlewareLevel([1]), createStudent);
 router.get("/", verifyToken, middlewareLevel([1]), getStudents);
 router.get("/:id", verifyToken, middlewareLevel([1]), getStudent);

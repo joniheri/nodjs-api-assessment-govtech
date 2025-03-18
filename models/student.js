@@ -8,7 +8,12 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      Student.belongsToMany(models.Teacher, {
+        through: models.TeacherStudent,
+        foreignKey: "studentId",
+        onDelete: "CASCADE",
+        as: "teachers",
+      });
     }
   }
   Student.init(
@@ -38,6 +43,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       suspended: {
         type: DataTypes.BOOLEAN,
+        defaultValue: false,
       },
     },
     {

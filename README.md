@@ -25,16 +25,18 @@
 ## Endpoint API
 
 - AuthRoutes:
-  - `http://localhost:3000/api/auth/register` --> register: method POST
-  - `http://localhost:3000/api/auth/login` --> login: method POST
-  - `http://localhost:3000/api/auth/login` --> refres-token: method POST
+  - `POST` `http://localhost:3000/api/auth/register` --> register-user
+  - `POST` `http://localhost:3000/api/auth/login` --> login-user
+  - `POST` `http://localhost:3000/api/auth/refres-token` --> refres-token-user
 - TeacherRoutes:
+  - `POST` `http://localhost:3000/api/teachers/register` --> register siswa oleh guru
+  - `POST` `Bearer Token` `http://localhost:3000/api/teachers/register-protected` --> register siswa oleh guru menggunakan token (ini hanya contoh endpoint yang menggunakan middleware)
+  - `GET` `http://localhost:3000/api/teachers/commonstudents?teacher=teacher@email.com` --> menampilkan data siswa berdasarkan guru
+  - `GET` `http://localhost:3000/api/teachers/commonstudents?teacher=teacher@email.com&teacher=teacher2@email.com` --> menampilkan data siswa berdasarkan multi guru
+  - ` POST` `http://localhost:3000/api/teachers/suspend ` --> memberikan suspend/skors ke siswa
+  - ` POST` `http://localhost:3000/api/teachers/retrievefornotifications ` --> mengirimi notifikasi ke siswa
   - Catatan:
-    - Untuk mengakses endpoint TeacherRoutes ini, harus menyertakan Authorization `Barier Token`, dimana token `Barier Token` didapat dari setelah hit endpoint `login` dan harus user yang level-nya `1`
-  - `http://localhost:3000/api/teachers` --> add-teacher: method POST
-  - `http://localhost:3000/api/teachers` --> get-teachers: method GET
-  - `http://localhost:3000/api/teachers/id-teacher` --> update-teachers: method PATCH
-  - `http://localhost:3000/api/teachers/id-teacher` --> delete-teachers: method DELETE
+    - Untuk endpoint yang harus menyertakan Authorization `Barier Token`, dapatkan token dari endpoint `http://localhost:3000/api/auth/register` dan harus user yang level-nya `1`.
 
 ## Struktur Directory Folder/File
 
