@@ -7,7 +7,7 @@
 
 ## Sebelum Menjalankan Program
 
-1. Pastikan Node.js dan MySQL sudah terinstal.
+1. Pastikan Node.js dan MySQL sudah terinstal serta pastikan juga Server MySQL sudah Running.
 2. Clone repository dari GitHub:
    ```sh
    git clone https://github.com/joniheri/nodjs-api-assessment-govtech
@@ -146,7 +146,73 @@ Jika berhasil, API dapat diakses melalui `http://localhost:3000`
 
 ---
 
-### 5. Mengirim Notifikasi ke Siswa Oleh Guru
+### 5 Menampilkan Siswa Berdasarkan Guru:
+
+- **Endpoint:** `GET /api/teachers/commonstudents?teacher=teacher@email.com`
+- **Response:**
+  ```json
+  {
+    "students": [
+      "student1@email.com",
+      "student2@email.com",
+      "student4@email.com"
+    ]
+  }
+  ```
+
+---
+
+### 6 Menampilkan Siswa Berdasarkan Multi Guru:
+
+**Endpoint:** `GET /api/teachers/commonstudents?teacher=teacher@email.com&teacher=teacher2@email.com`
+
+**Response:**
+
+```json
+{
+  "students": [
+    "student1@email.com",
+    "student2@email.com",
+    "student3@email.com",
+    "student4@email.com"
+  ]
+}
+```
+
+---
+
+### 7 Suspend/Skors Siswa Oleh Guru:
+
+**Endpoint:** `POST /api/teachers/suspend`
+
+**Request Body:**
+
+```json
+{
+  "student": "student4@email.com"
+}
+```
+
+**Response:** Tidak ada (status: `HTTP 204`)
+
+---
+
+### 8 UnSuspend/Membatalkan Skors Siswa Oleh Guru:
+
+**Endpoint:** `POST /api/teachers/unsuspend`
+**Request Body:**
+
+```json
+{
+  "student": "student4@email.com"
+}
+```
+
+**Response:** Tidak ada (status: `HTTP 204`)
+
+---
+
+### 9. Mengirim Notifikasi ke Siswa Oleh Guru
 
 **Endpoint:** `POST /api/teachers/retrievefornotifications`
 
@@ -159,7 +225,7 @@ Jika berhasil, API dapat diakses melalui `http://localhost:3000`
 }
 ```
 
-**Response:**
+**Response Body:**
 
 ```json
 {
@@ -232,14 +298,16 @@ package.json
 
 ## Before Running the Program
 
-- Ensure you have installed Node.js 22.x.x and MySQL 8.x.x (or XAMPP 8.1 for MySQL database) on your computer.
+- Ensure you have installed Node.js 22.x.x and MySQL 8.x.x (or XAMPP 8.1 for MySQL database) on your computer and also make sure the MySQL Server is running.
 - Obtain the source code from GitHub: [https://github.com/joniheri/nodjs-api-assessment-govtech](https://github.com/joniheri/nodjs-api-assessment-govtech)
 - Open the source code in a text editor like Visual Studio Code (VSCode).
 - Open the terminal in VSCode and run the following commands:
-  - `npm install` → Install all required libraries.
-  - `npx sequelize-cli db:create` → Create the `assessment_govtech` database.
-  - `npx sequelize-cli db:migrate` → Run all table migrations.
-  - `npx sequelize-cli db:seed --seed 20250318064050-user-seeder` → Execute the seeder file to insert initial data into the `users` table.
+  ```sh
+    npm install                  # Install all dependency
+    npx sequelize-cli db:create   # Make database 'assessment_govtech'
+    npx sequelize-cli db:migrate  # Migration all table to database
+    npx sequelize-cli db:seed --seed 20250318064050-user-seeder  # Seed first data user
+  ```
 
 ## Running the Program
 
@@ -249,7 +317,7 @@ package.json
 
 ## API Endpoints
 
-### User Registration:
+### 1 User Registration:
 
 - **Endpoint:** `POST /api/auth/register`
 - **Request Body:**
@@ -277,7 +345,9 @@ package.json
   }
   ```
 
-### User Login:
+---
+
+### 2 User Login:
 
 - **Endpoint:** `POST /api/auth/login`
 - **Request Body:**
@@ -304,7 +374,9 @@ package.json
   }
   ```
 
-### Retrieve Teachers:
+---
+
+### 3 Retrieve Teachers:
 
 - **Endpoint:** `GET /api/teachers`
 - **Response Body:**
@@ -329,7 +401,9 @@ package.json
   }
   ```
 
-### Register Students Under a Teacher:
+---
+
+### 4 Register Students Under a Teacher:
 
 - **Endpoint:** `POST /api/teachers/register`
 - **Request Body:**
@@ -345,7 +419,9 @@ package.json
   ```
 - **Response:** No response body, returns `HTTP 204`
 
-### Retrieve Students for a Specific Teacher:
+---
+
+### 5 Retrieve Students for a Specific Teacher:
 
 - **Endpoint:** `GET /api/teachers/commonstudents?teacher=teacher@email.com`
 - **Response Body:**
@@ -359,7 +435,9 @@ package.json
   }
   ```
 
-### Retrieve Students for Multiple Teachers:
+---
+
+### 6 Retrieve Students for Multiple Teachers:
 
 - **Endpoint:** `GET /api/teachers/commonstudents?teacher=teacher@email.com&teacher=teacher2@email.com`
 - **Response Body:**
@@ -374,7 +452,9 @@ package.json
   }
   ```
 
-### Suspend a Student:
+---
+
+### 7 Suspend a Student:
 
 - **Endpoint:** `POST /api/teachers/suspend`
 - **Request Body:**
@@ -385,7 +465,22 @@ package.json
   ```
 - **Response:** No response body, returns `HTTP 204`
 
-### Send Notifications to Students:
+---
+
+### 8 UnSuspend a Student:
+
+- **Endpoint:** `POST /api/teachers/unsuspend`
+- **Request Body:**
+  ```json
+  {
+    "student": "student4@email.com"
+  }
+  ```
+- **Response:** No response body, returns `HTTP 204`
+
+---
+
+### 9 Send Notifications to Students:
 
 - **Endpoint:** `POST /api/teachers/retrievefornotifications`
 - **Request Body:**
@@ -405,6 +500,8 @@ package.json
     ]
   }
   ```
+
+---
 
 ### Note:
 
@@ -446,3 +543,12 @@ tests/               # Unit testing with Jest
 package-lock.json
 package.json
 ```
+
+---
+
+## Notes
+
+- Some endpoints require Authorization `Bearer Token`. The token is obtained from the login endpoint.
+- Use Postman or similar applications to test the API.
+
+  **Happy testing!**
