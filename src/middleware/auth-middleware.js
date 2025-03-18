@@ -42,7 +42,7 @@ exports.verifyToken = async (req, res, next) => {
     if (!user) {
       return res.status(404).send({
         status: "fail",
-        message: `User with ID: ${decode.id} not found`,
+        message: `Access to User with ID: ${decode.id} not found`,
       });
     }
 
