@@ -19,6 +19,8 @@
   `npx sequelize-cli db:seed:all`
 - Running seeder specific
   `npx sequelize-cli db:seed --seed name-of-seed-as-in-data`
+- Runing seeder untuk database `test`
+  `npx sequelize-cli db:seed:all --env test`
 - Undo seeder
   `npx sequelize-cli db:seed:undo`
 - Undo all seeder:

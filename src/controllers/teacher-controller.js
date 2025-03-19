@@ -8,7 +8,9 @@ const joi = require("joi");
 
 exports.getTeachers = async (req, res) => {
   try {
-    // Ambil semua data guru dari database
+    const TeacherModel = req.models?.Teacher || require("../../models").Teacher;
+
+    //Get all teachers data from database
     const teachers = await TeacherModel.findAll({
       attributes: {
         exclude: ["password", "createdAt", "updatedAt"],
@@ -16,7 +18,7 @@ exports.getTeachers = async (req, res) => {
       order: [["createdAt", "DESC"]],
     });
 
-    // Jika tidak ada data guru
+    // If no data teachers in database
     if (teachers.length === 0) {
       return res.status(404).send({
         status: "fail",
@@ -40,12 +42,12 @@ exports.getTeachers = async (req, res) => {
 };
 
 exports.registerStudents = async (req, res) => {
-  // Membuat transaksi database untuk memastikan semua perubahan dilakukan dengan aman.
-  // Jika ada error, semua perubahan bisa dibatalkan (rollback).
+  // Creating a database transaction to ensure all changes are made safely.
+  // If an error occurs, all changes can be rolled back.
   const transaction = await sequelize.transaction();
 
   try {
-    // Validasi Input Menggunakan Joi
+    // Validasi Input Using Joi
     const schema = joi.object({
       teacher: joi.string().email().required(),
       students: joi.array().items(joi.string().email()).required(),
@@ -61,39 +63,39 @@ exports.registerStudents = async (req, res) => {
 
     const { teacher, students } = value;
 
-    // **Gunakan findOrCreate agar lebih aman dari race condition**
+    // **Use findOrCreate to be safer from race conditions.**
     const [teacherRecord] = await TeacherModel.findOrCreate({
       where: { email: teacher },
       defaults: { email: teacher },
       transaction,
     });
 
-    // **Ambil semua student yang sudah ada dalam satu query**
+    // **Retrieve all existing students in a single query.**
     const existingStudents = await StudentModel.findAll({
       where: { email: students },
       transaction,
     });
 
-    // Buat daftar email student yang sudah ada
+    // Create a list of existing student emails.
     const existingStudentEmails = existingStudents.map((s) => s.email);
 
-    // Cari student yang belum ada di database
+    // Find students who are not yet in the database.
     const newStudentEmails = students.filter(
       (email) => !existingStudentEmails.includes(email)
     );
 
-    // Jika ada student baru, buat sekaligus dengan bulkCreate
+    // If there are new students, create them at once using bulkCreate.
     if (newStudentEmails.length > 0) {
       const newStudents = await StudentModel.bulkCreate(
         newStudentEmails.map((email) => ({ email })),
         { transaction, ignoreDuplicates: true, returning: true }
       );
 
-      // Gabungkan student yang baru dibuat dengan yang sudah ada
+      // Merge the newly created students with the existing ones.
       existingStudents.push(...newStudents);
     }
 
-    // **Cek apakah relasi Teacher-Student sudah ada sebelum menambahkan**
+    // **Check if the Teacher-Student relationship already exists before adding.**
     const existingRelations = await TeacherStudentModel.findAll({
       where: {
         teacherId: teacherRecord.id,
@@ -104,7 +106,7 @@ exports.registerStudents = async (req, res) => {
 
     const existingRelationIds = existingRelations.map((rel) => rel.studentId);
 
-    // Filter hanya student yang belum terdaftar dengan teacher ini
+    // Filter only students who are not yet registered with this teacher.
     const relationsToInsert = existingStudents
       .filter((student) => !existingRelationIds.includes(student.id))
       .map((student) => ({
@@ -112,24 +114,19 @@ exports.registerStudents = async (req, res) => {
         studentId: student.id,
       }));
 
-    // Gunakan `bulkCreate` agar lebih optimal
+    // Use bulkCreate for better optimization.
     if (relationsToInsert.length > 0) {
       await TeacherStudentModel.bulkCreate(relationsToInsert, {
         transaction,
-        ignoreDuplicates: true, // Mencegah error jika ada duplikasi
+        ignoreDuplicates: true, // Prevent errors if there are duplicates
       });
     }
 
-    await transaction.commit(); // Commit jika semua proses berhasil
-
-    // return res.status(201).json({
-    //   status: "success",
-    //   message: "Teacher registered students successfully",
-    // });
+    await transaction.commit(); // Commit if all process success
 
     return res.status(204).json();
   } catch (error) {
-    await transaction.rollback(); // Rollback jika ada error
+    await transaction.rollback(); // Rollback if an error
     console.error(error.message);
     return res.status(500).json({
       status: "fail",
@@ -141,9 +138,9 @@ exports.registerStudents = async (req, res) => {
 
 exports.getCommonStudents = async (req, res) => {
   try {
-    let teachers = req.query.teacher; // Ambil query parameter teacher
+    let teachers = req.query.teacher; // Take query teacher parameter
 
-    // Pastikan teacher adalah array (jika hanya satu, ubah jadi array)
+    // Ensure teacher is array (if just one, chate to array)
     if (!teachers) {
       return res.status(400).json({
         status: "fail",
@@ -151,53 +148,52 @@ exports.getCommonStudents = async (req, res) => {
       });
     }
     if (!Array.isArray(teachers)) {
-      teachers = [teachers]; // Ubah jadi array jika hanya satu
+      teachers = [teachers]; // Chage to array if just one
     }
 
-    // Cari semua teacher berdasarkan email
+    // Search all teacher by email
     const teacherRecords = await TeacherModel.findAll({
       where: { email: teachers },
-      attributes: ["id"], // Kita hanya butuh ID
+      attributes: ["id"], // We just need ID
     });
 
-    // Jika tidak ada guru yang ditemukan, kembalikan response kosong
+    // If not teacher found, return empty response
     if (teacherRecords.length === 0) {
       return res.status(200).json({ students: [] });
     }
 
-    // Ambil semua ID guru
+    // Take all Teacher ID
     const teacherIds = teacherRecords.map((teacher) => teacher.id);
 
-    // Ambil semua relasi student yang diajar oleh teacher yang diminta
+    // Retrieve all student relationships taught by the requested teacher.
     const teacherStudentRecords = await TeacherStudentModel.findAll({
       where: { teacherId: teacherIds },
       attributes: ["studentId"], // Kita hanya butuh ID murid
     });
 
-    // Jika tidak ada student yang ditemukan, return kosong
+    // If student not found, return an empty response
     if (teacherStudentRecords.length === 0) {
       return res.status(200).json({ students: [] });
     }
 
-    // Hitung jumlah guru per studentId (untuk filtering jika banyak guru)
+    // Count the number of teachers per studentId (for filtering if there are multiple teachers)
     const studentCountMap = {};
     teacherStudentRecords.forEach((record) => {
       studentCountMap[record.studentId] =
         (studentCountMap[record.studentId] || 0) + 1;
     });
 
-    // Ambil hanya studentId yang muncul sebanyak jumlah teacher (artinya diajar oleh semua guru)
+    // Retrieve only the student IDs that appear as many times as the number of teachers (meaning they are taught by all the teachers).
     const commonStudentIds = Object.keys(studentCountMap).filter(
       (studentId) => studentCountMap[studentId] === teacherIds.length
     );
 
-    // Ambil email dari student yang ditemukan
+    // Retrieve email from student found
     const commonStudents = await StudentModel.findAll({
       where: { id: commonStudentIds },
       attributes: ["email"], // Kita hanya butuh email
     });
 
-    // Kirim response
     return res.status(200).json({
       students: commonStudents.map((student) => student.email),
     });
@@ -228,7 +224,7 @@ exports.suspendStudent = async (req, res) => {
 
     const { student } = value;
 
-    // Cari student berdasarkan email
+    // Search student by email
     const studentRecord = await StudentModel.findOne({
       where: { email: student },
     });
@@ -243,7 +239,7 @@ exports.suspendStudent = async (req, res) => {
     // Update status suspended
     await studentRecord.update({ suspended: true });
 
-    return res.status(204).send(); // Berhasil, tanpa response body
+    return res.status(204).send(); // Suucess, without response body
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -271,7 +267,7 @@ exports.unSuspendStudent = async (req, res) => {
 
     const { student } = value;
 
-    // Cari student berdasarkan email
+    // Search student by email
     const studentRecord = await StudentModel.findOne({
       where: { email: student },
     });
@@ -283,7 +279,7 @@ exports.unSuspendStudent = async (req, res) => {
       });
     }
 
-    // Jika student tidak dalam kondisi suspended, return 400
+    // If the student is not suspended, return a 400 status code.
     if (!studentRecord.suspended) {
       return res.status(400).json({
         status: "fail",
@@ -291,10 +287,10 @@ exports.unSuspendStudent = async (req, res) => {
       });
     }
 
-    // Update status suspended ke false
+    // Update status suspended to false
     await studentRecord.update({ suspended: false });
 
-    return res.status(204).send(); // Berhasil, tanpa response body
+    return res.status(204).send(); // Succes, without response body
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -307,7 +303,7 @@ exports.unSuspendStudent = async (req, res) => {
 
 exports.retrieveForNotifications = async (req, res) => {
   try {
-    // Validasi request body menggunakan Joi
+    // Validasi request body
     const schema = joi.object({
       teacher: joi.string().email().required(),
       notification: joi.string().required(),
@@ -323,7 +319,7 @@ exports.retrieveForNotifications = async (req, res) => {
 
     const { teacher, notification } = value;
 
-    // Cek apakah guru ada di database
+    // Check if the teacher exists in the database.
     const teacherRecord = await TeacherModel.findOne({
       where: { email: teacher },
     });
@@ -335,7 +331,7 @@ exports.retrieveForNotifications = async (req, res) => {
       });
     }
 
-    // Ambil daftar siswa yang terdaftar pada guru ini dan tidak disuspend
+    // Retrieve the list of students registered under this teacher and not suspended.
     const registeredStudents = await StudentModel.findAll({
       include: {
         model: TeacherModel,
@@ -345,15 +341,15 @@ exports.retrieveForNotifications = async (req, res) => {
       where: { suspended: false },
     });
 
-    // Ambil daftar email siswa yang terdaftar pada guru
+    // Retrieve the list of student emails registered under the teacher.
     const registeredEmails = registeredStudents.map((s) => s.email);
 
-    // Cari email yang disebutkan dalam notifikasi dengan regex
+    // Find the emails mentioned in the notification using regex.
     const mentionedEmails = (
       notification.match(/@([\w.-]+@[a-zA-Z.-]+)/g) || []
     ).map((email) => email.substring(1)); // Hilangkan karakter '@'
 
-    // Ambil daftar siswa dari mention yang ada dalam database dan tidak suspended
+    // Retrieve the list of students from the mentions that exist in the database and are not suspended.
     const mentionedStudents = await StudentModel.findAll({
       where: {
         email: mentionedEmails,
@@ -363,7 +359,7 @@ exports.retrieveForNotifications = async (req, res) => {
 
     const mentionedEmailsFiltered = mentionedStudents.map((s) => s.email);
 
-    // Cek apakah ada email yang disebut tetapi tidak ditemukan di database
+    // Retrieve the list of students from the mentions that exist in the database and are not suspended.
     const notFoundEmails = mentionedEmails.filter(
       (email) => !mentionedEmailsFiltered.includes(email)
     );
@@ -375,7 +371,7 @@ exports.retrieveForNotifications = async (req, res) => {
       });
     }
 
-    // Gabungkan daftar email registered students dan mentioned students
+    // Merge the list of registered students' emails and mentioned students' emails.
     const recipients = [
       ...new Set([...registeredEmails, ...mentionedEmailsFiltered]),
     ];
